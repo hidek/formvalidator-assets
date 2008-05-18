@@ -1,20 +1,47 @@
 package FormValidator::Assets::Types;
+
+use UNIVERSAL::require;
+use Data::Dumper;
 use Moose;
 use Moose::Util::TypeConstraints;
 
-use Path::Class::Dir;
+subtype Filter => as 'Object' =>
+    where { $_->does('FormValidator::Assets::Filter') };
 
-subtype 'AssetsDir'
-    => as 'Object'
-    => where { $_->isa('Path::Class::Dir') && -e $_ && -d _ };
+subtype Constraint => as 'Object' =>
+    where { $_->does('FormValidator::Assets::Constraint') };
 
-coerce 'AssetsDir'
-    => from 'Str'
-       => via { Path::Class::Dir->new($_) }
-    => from 'ArrayRef'
-       => via { Path::Class::Dir->new(@{ $_ }) };
+subtype 'ArrayRef[Filter]' => as 'ArrayRef';
+subtype 'ArrayRef[Constraint]' => as 'ArrayRef';
 
-__PACKAGE__->meta->make_immutable;
+coerce 'ArrayRef[Filter]' 
+    => from "ArrayRef",
+    => via {
+    my $t = Moose::Util::TypeConstraints::find_type_constraint("Filter");
+    [ map { $t->coerce($_) } @$_ ];
+    };
+coerce 'ArrayRef[Constraint]' 
+    => from "ArrayRef",
+    => via {
+    my $t = Moose::Util::TypeConstraints::find_type_constraint("Constraint");
+    [ map { $t->coerce($_) } @$_ ];
+    };
+
+coerce Filter => from 'HashRef' => via {
+    my $module = $_->{module};
+    my $args   = $_->{args};
+    $module = "FormValidator::Assets::Filter::$module";
+    $module->require or confess "$module is not found";
+    return $module->new(%$args);
+};
+
+coerce Constraint => from 'HashRef' => via {
+    my $module = $_->{module};
+    my $args   = $_->{args};
+    $module = "FormValidator::Assets::Constraint::$module";
+    $module->require or confess "$module is not found";
+    return $module->new(%$args);
+};
 
 1;
 

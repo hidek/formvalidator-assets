@@ -1,14 +1,52 @@
 package FormValidator::Assets::Rule;
+
 use Moose;
+use Moose::Util::TypeConstraints;
 
-extends 'FormValidator::Assets::Component';
+use FormValidator::Assets::Types qw(Filter Constraint);
 
-use overload q{""} => sub { shift->rule };
+has 'name' => ( is => 'rw', isa => 'Str' );
+has 'fields' => (
+    is => 'rw',
+    isa => 'ArrayRef',
+);
 
-has 'rule'    => ( is => 'ro', required => 1 );
-has 'process' => ( is => 'ro', required => 1 );
-has 'message' => ( is => 'rw' );
+has 'filters' => (
+    is     => 'rw',
+    isa    => 'ArrayRef[Filter]',
+    #isa    => 'Filter',
+    coerce => 1,
+    default => sub {[]},
+);
+
+has 'constraints' => (
+    is     => 'rw',
+    isa    => 'ArrayRef[Constraint]',
+    #isa    => 'Constraint',
+    coerce => 1,
+    default => sub {[]},
+);
+
+has 'context' => (
+    is => 'ro',
+    isa => 'FormValidator::Assets',
+    weakref => 1,
+);
+
+sub process {
+    my $self = shift;
+
+    for my $filter ( @{ $self->filters } ) {
+        for my $value (@{$sekf->fields}) {;
+        $filter->process ($value);
+        }
+    }
+
+    #for my $constraint ( @{ $self->constraints } ) {
+    #    $constraint->process;
+    #}
+}
 
 __PACKAGE__->meta->make_immutable;
-
 1;
+
